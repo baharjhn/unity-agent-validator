@@ -39,7 +39,7 @@ Tests (Edit Mode, Unity Test Framework): `unity command test run --mode EditMode
 2. **My decisions:** a structured `{ count, issues[] }` result instead of a JSON string, so agents can read the fields directly; extra tests for missing scripts on inactive nested children; scenes kept out of scope.
 3. **What the agent adapted:** my spec used `objectReferenceInstanceIDValue`, which is obsolete in Unity 6.6. It switched to `objectReferenceEntityIdValue` with the same logic.
 4. **What it got wrong:** 3 tests failed at first because of a wrong assumption about prefab root names. It fixed its test setup after running the tests.
-5. **What I verified:** `count: 0` on an empty project proved nothing, so I broke two prefabs by hand. The command found both.
+5. **What I verified:** `count: 0` on an empty project proved nothing, so I created two broken prefabs myself, one with a deleted material and one with a deleted script, and the command reported both with correct paths.
 
 ## What I learned
 
