@@ -139,3 +139,28 @@ You can also run them from **Window → General → Test Runner → EditMode** i
 - **Prefabs only.** Scenes and ScriptableObject assets are not scanned.
 - **`Assets/` only by default.** Prefabs inside packages are skipped unless you pass their folders to `ScanAllPrefabs`.
 - **Nested prefabs can repeat issues.** A missing reference inherited from a nested prefab is reported once for every prefab that contains it.
+
+
+## How it was built (agentic workflow)
+
+I built this with Claude Code driving the Unity Editor through the Unity CLI and the Pipeline package, with me reviewing each step.
+
+1. **Spec first.** I wrote a short spec (scanner, `find-missing-refs` command, Edit Mode tests) and asked the agent to show its plan before writing any code.
+2. **Plan review and decisions.**
+   - I chose a structured result model (`{ count, issues[] }`) over a JSON string, so an agent can read the fields directly instead of parsing text.
+   - I asked for extra test coverage: missing scripts on an inactive nested child and under an inactive parent.
+   - I kept scenes out of scope and approved the one change outside the tool folder (adding `com.unity.test-framework` to `manifest.json`).
+3. **What the agent adapted.** My spec used `objectReferenceInstanceIDValue`, which is obsolete as an error in Unity 6.6. The agent noticed it didn't compile and switched to `objectReferenceEntityIdValue != EntityId.None`, which keeps the same logic.
+4. **What the agent got wrong first.** 3 tests failed on the first run because of a wrong assumption in its test setup: when Unity loads a prefab, the root object takes the file's name. It fixed the setup after running the tests, not the scanner.
+5. **What I verified myself.**
+   - Ran `unity command find-missing-refs` on the clean project: `count: 0`. On its own that proves little, because the project had no prefabs.
+   - Built two broken prefabs by hand (a deleted material, a deleted script) and ran the command again: it reported both, with correct paths. This was the first non-empty result and the real proof that the scanner works.
+   - Ran the Edit Mode tests in the Test Runner.
+
+## What I learned
+
+- Agents work best with **structured feedback they can check against**: a command that returns JSON and a test suite let the agent (and me) verify the work instead of trusting it.
+- **Reviewing the plan** caught the important decisions early (result format, test coverage, scope) before any code was written.
+- An agent can adapt to API changes the spec didn't know about, but every change still needs a human to confirm the logic stays the same.
+- "No issues found" isn't evidence until you've seen the tool find a real issue.
+- For missing references there is **no safe automatic fix**: nobody knows what the deleted material or script was. A tool or agent should report and ask, not guess. That's why seeing and reviewing what an agent changed matters so much in the Editor.
